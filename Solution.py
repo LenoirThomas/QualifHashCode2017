@@ -95,7 +95,19 @@ class Solution(object):
 	def select_wtf(self,indexs):
 		return min(indexs , key = lambda x:x[1]*x[2])
 
-	
+
+
+	##################neighborhood functions##################
+	# id_ci : if of the cache servers
+	# exchanges some videos between two cache servers
+	# accoring the 
+	def swap_videos(self,id_c1, id_c2):
+		## browse the video of c1
+		for v in self.caches[id_c1]:
+			for w in self.caches[id_c2]:
+				# test if the swap between v and w increase the solution
+				pass
+
 	
 
 

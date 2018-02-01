@@ -12,7 +12,8 @@ def example():
 		{3 : [1], 4:[],1:[1,2] },# endpoint 0, the video 3 is in the cache1 , the video 4 in none , the video 1, in the cache 0 and 2 
 		{0 : []}
 	]
-	#s.glouton()
+	print s.get_score()
+	s.glouton(s.select_low_cache)
 	print s.get_score()
 
 def glouton():

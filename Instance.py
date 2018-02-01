@@ -57,7 +57,13 @@ class Instance(object):
         # read the requests : 
         for k in range(i,len(lines)):
             l = lines[k].split()
-            self.requests.append((int(l[0]),int(l[1]),int(l[2])))
+            q = 0
+            while q < len(self.requests) and (self.requests[q][0],self.requests[q][1])!=(int(l[0]),int(l[1])):
+                q+=1
+            if q == len(self.requests):
+                self.requests.append([int(l[0]),int(l[1]),int(l[2])])
+            else:
+                self.requests[q][2]+=int(l[2])
 
     def print_i(self):
         print self.V," ",self.E," ",self.U," ",self.C," ",self.X
