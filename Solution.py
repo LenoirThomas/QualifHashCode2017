@@ -55,6 +55,8 @@ class Solution(object):
 			score += (self.inst.lat_data[re] - min(latency)) * rn
 			nbrequest+= rn
 		return (score*1000) / nbrequest
+
+
 	def write_file(self,name):
 		pass
 
@@ -95,6 +97,8 @@ class Solution(object):
 	def select_wtf(self,indexs):
 		return min(indexs , key = lambda x:x[1]*x[2])
 
+	def select_wtf2(self,indexs):
+		return max(indexs , key = lambda x:x[1]*x[2])
 
 
 	##################neighborhood functions##################
@@ -108,7 +112,42 @@ class Solution(object):
 				# test if the swap between v and w increase the solution
 				pass
 
-	
+	def glouton2(self):
+
+		cs_by_v = []
+		## for each video
+		for id_v in range(self.inst.V):
+			# look for the cache server cs wich maximize the sum_ep ( nbrequest(V_ep) / latency(cs,ep) )
+
+			for id_cs in range(self.inst.C):
+				# get the endpoints connected with this cs
+				eps = self.inst.ep_by_caches[id_cs]
+
+				tmp = 0 # (nb requests for the endpoints connected with this cs  * (Latency_DServer - Latency_Cs)
+				for (id_ep,latency) in eps:
+					#print id_v," ",id_ep," ",self.inst.vr[id_v]," ",eps
+					if id_ep in self.inst.vr[id_v].keys():
+						tmp += (self.inst.vr[id_v][id_ep] * (self.inst.lat_data[id_ep] - latency))
+			
+				# don't take only the max among the cache server, severals cache servers can have the same videos
+				# save for all the cache server
+				cs_by_v.append((id_v,id_cs,tmp))
+
+		cs_by_v = sorted(cs_by_v, key=lambda x: x[2], reverse=True)
+		# fill the data for the score
+		for (id_v,id_cs,tmp) in cs_by_v:
+			#print id_v," ",id_cs," ",tmp
+			video_size = self.inst.vs[id_v]
+			if self.caches[id_cs][0]+video_size < self.inst.X:
+
+				for (id_ep,_) in self.inst.ep_by_caches[id_cs]:
+					if id_v in self.s[id_ep].keys():
+						self.s[id_ep][id_v].append(id_cs)
+				self.caches[id_cs][0]+=video_size
+				self.caches[id_cs][1].append(id_v)
+
+
+
 
 
 

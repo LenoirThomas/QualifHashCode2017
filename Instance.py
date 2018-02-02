@@ -25,8 +25,14 @@ class Instance(object):
         # [ [ {id cache server1 : latency, id cache server 2 : latency}] , ...same for the endpoint 2, ...]
         self.ep = []
 
+        # list the endpoints connected by cache server
+        self.ep_by_caches = []
+
         # each element corresponding to a 3-uplet (id video, id endpoint , number of this requests)
         self.requests = []
+
+        # video request, dict[id video][id_ep] = number of request
+        self.vr = {}
 
     def read_file(self, name):
         f = open(name, "r")
@@ -38,6 +44,11 @@ class Instance(object):
         self.vs = [int(i) for i in lines[1].split()]
         # read the data enpoints
         i=2
+        
+        id_ep = 0
+        self.ep_by_caches = [ [] for _ in range(self.C)]
+        self.vr = [ {} for _ in range(self.V)]
+
 
         while len(lines[i].split())==2:
             l = lines[i].split()
@@ -47,23 +58,29 @@ class Instance(object):
             if (int(l[1])>0):
                 for k in range(1,int(l[1])+1):#browse the cache servers linked with this endpoints
                     l2 = lines[i+k].split()
-                    #tmp.append((int(l2[0]), int(l2[1])))
-                    tmp[int(l2[0])] = int(l2[1])
+                    (id_cs,latency) = (int(l2[0]),int(l2[1]))
+                    tmp[id_cs] = latency
+                    self.ep_by_caches[id_cs].append((id_ep, latency))
                 i+=k
             i+=1
             self.ep.append(tmp)
+            id_ep+=1
         #print "ep = ",self.ep
             #self.ep.append( [(int(lines[i+k].split()[0],int(lines[i+k].split()[1]))) for k in range(1,int(l[1]))])
         # read the requests : 
         for k in range(i,len(lines)):
             l = lines[k].split()
+
+            (id_v, id_ep, nb_request) = (int(l[0]),int(l[1]),int(l[2]))
             q = 0
-            while q < len(self.requests) and (self.requests[q][0],self.requests[q][1])!=(int(l[0]),int(l[1])):
+            while q < len(self.requests) and (self.requests[q][0],self.requests[q][1])!=(id_v,id_ep):
                 q+=1
             if q == len(self.requests):
-                self.requests.append([int(l[0]),int(l[1]),int(l[2])])
+                self.requests.append([id_v,id_ep,nb_request])
+                self.vr[id_v][id_ep] = nb_request
             else:
-                self.requests[q][2]+=int(l[2])
+                self.requests[q][2]+=nb_request
+                self.vr[id_v][id_ep]+=nb_request
 
     def print_i(self):
         print self.V," ",self.E," ",self.U," ",self.C," ",self.X
