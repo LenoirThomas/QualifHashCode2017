@@ -23,22 +23,81 @@ class Solution(object):
         print "Affection correct : ", b
         print "=" * 101
 
+    ######################################################################################
     # return the videos requested by the endpoints conncted with the cache server id_cs
+    def get_videos_by_cs2(self, id_cs):
+        videos_by_cs = defaultdict(int)
+        for (id_ep, _) in self.inst.ep_by_caches[id_cs]:
+            for (id_v, nb_request) in self.inst.videos_by_ep[id_ep].items():
+                videos_by_cs[id_v] += ((self.inst.lat_data[id_ep]-self.inst.ep[id_ep][id_cs])*nb_request)
+        return videos_by_cs
+
+    def sort_cs(self):
+        pass
+    def get_dict_by_ep(self):
+        l= []
+        for id_ep in range(self.inst.E):
+            d = {}
+            for (id_v, nb_reques) in self.inst.videos_by_ep[id_ep].items():
+                d[id_v] = False
+            l.append(d)
+        return l
+
+    def aa(self):
+        done = self.get_dict_by_ep()# d[ep][v] = True if the video is allocated to a cache server connected with ep
+        
+        mo_by_cs = [ 0 for _ in range(self.inst.C)]
+        video_by_cs = [ self.get_videos_by_cs2(id_cs) for id_cs in range(self.inst.C)]
+
+        cs = set( i for i in range(self.inst.C))
+
+        while cs:
+            best_couple=(-1,-1)
+            best_score = -1
+            for id_cs in cs:
+                for (id_v,score) in video_by_cs[id_cs].items():
+                    if score> best_score:# and mo_by_cs[i]+self.inst.vs[id_v] <= self.inst.X:
+                        best_score = score
+                        best_couple = (id_cs,id_v)
+
+            # allocate the couple  cache server,video with the best score
+            if mo_by_cs[best_couple[0]] + self.inst.vs[id_v] <= self.inst.X:
+
+                self.caches[best_couple[0]].append(best_couple[1])
+                mo_by_cs[best_couple[0]]+=self.inst.vs[id_v]
+                # delet it to not consider it again
+                del video_by_cs[best_couple[0]][best_couple[1]]
+                # update the score for the other cacher servers whose the endpoints request this video....
+                for (id_ep,_) in self.inst.ep_by_caches[best_couple[0]]:# all the endpoint link with this cs 
+                    done[id_ep][best_couple[1]]=True
+                    for (id_cs,lat) in self.inst.caches_by_ep[id_ep]:# all the cs link with this ep
+                        if id_cs != best_couple[0]:
+                            video_by_cs[id_cs][best_couple[0]] -= ((self.inst.lat_data[id_ep]-lat)*self.inst.videos_by_ep[id_ep][best_couple[1]])
+            else:
+                cs.remove(best_couple[0]) 
+
+
+    ############################################################################
+    ############################################################################
     def get_videos_by_cs(self, id_cs):
         videos_by_cs = defaultdict(int)
         for (id_ep, _) in self.inst.ep_by_caches[id_cs]:
             for (id_v, nb_request) in self.inst.videos_by_ep[id_ep].items():
-                videos_by_cs[id_v] += nb_request
+                videos_by_cs[id_v] += ((self.inst.lat_data[id_ep]-self.inst.ep[id_ep][id_cs])*nb_request)
         return videos_by_cs
 
+    #993 000 , en prenant just le nombre de request
+    #1016360, nbrequestion / taille video
+    #1020790, en utilisatnt directement le score (L - Ls)*rn
     def knapsack(self):
         # res = []
         for i in range(self.inst.C):
             #print i, "/", self.inst.C
             # res.append([])
             videos_by_cs = self.get_videos_by_cs(i)
-            videos_sorted = sorted(videos_by_cs.items(),
-                                   key=operator.itemgetter(1), reverse=True)
+            #videos_sorted = sorted(videos_by_cs.items(),key=operator.itemgetter(1)/self.inst.vs[operator.itemgetter(0)], reverse=True)# sort by nb request
+            videos_sorted = sorted(videos_by_cs.items(),key=lambda x : x[1]/self.inst.vs[x[0]], reverse=True)# sort by nb request
+            
             sum_size = 0
             k = 0
             while sum_size <= self.inst.X and k < len(videos_sorted):
@@ -48,7 +107,7 @@ class Solution(object):
                     self.caches[i].append(id_v)
                     sum_size += self.inst.vs[id_v]
                 k += 1
-
+    ###########################################################################
     def get_score2(self):
         scor = 0
         nbr = 0
@@ -84,32 +143,47 @@ class Solution(object):
                 mo_by_cache[id_cs]+=video_size
                 self.caches[id_cs].append(id_v)
 
+    # 1689464
     def glouton(self,select_func):
         # sort the request by nb request / size => the more there are requests 
+        mo_by_cs = [0 for _ in range(self.inst.C)]
         request = sorted(self.inst.requests.items(), key = lambda x: x[1]/self.inst.vs[x[0][0]], reverse= True)
+        
+        #request = sorted(self.inst.requests.items(), key = lambda x: self.inst.lat_data[x[0][1]] - x[1]/self.inst.vs[x[0][0]], reverse= True)
+        
         for ((id_v,id_e),nbr) in request:
-            
             # get the cache servers which are connected to the endpoint r[1]
             cache_servers = self.inst.ep[id_e]# its a dict
             video_size = self.inst.vs[id_v]
             # print "cache_servers for the endpoint ",r[1]," : ",cache_servers
             indexs = []
-            sum_size=0
             for id_cache in cache_servers:
                 # print self.caches[id_cache]+video_size," ",self.inst.X
-                if sum_size+video_size <= self.inst.X and id_v not in self.caches[id_cache]: # take only the servers which can be 
+                if mo_by_cs[id_cache]+video_size <= self.inst.X and id_v not in self.caches[id_cache]: # take only the servers which can be 
                     # appedn a triplet = (id cache, nb megab on this cache, the latency ) 
-                    indexs.append((id_cache,sum_size, cache_servers[id_cache]))
+                    #indexs.append((id_cache,mo_by_cs[id_cache], (self.inst.lat_data[id_e]-cache_servers[id_cache])))
+                    indexs.append((id_cache,mo_by_cs[id_cache], cache_servers[id_cache]))
+                    
             if indexs:
                 # ......... select a cache server among these
                 index = select_func(indexs)
-                sum_size+=video_size
+                mo_by_cs[index[0]]+=video_size
                 self.caches[index[0]].append(id_v)
         return 0
 
-    # def glouton2(self):
+    def optimize_couple_caches(self,id_cs1,id_cs2):
+        set_cs1 = set()
+        set_cs2 = set()
+        for (id_ep1,latency1) in self.ep_by_caches[id_cs1]:
+            for (id_ep2,latency2) in self.ep_by_caches[id_cs2]:
+                if id_ep1 == id_ep2:# if connected with a same endpoint
+                    for v1 in self.caches[id_cs1]:
+                        for v2 in self.caches[id_cs2]:
+                            if v1 == v2: # 
+                                pass
 
 
+        print "here"
 
 
 

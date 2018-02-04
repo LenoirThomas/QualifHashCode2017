@@ -21,10 +21,11 @@ def select_wtf2(indexs):
 
 
 if __name__=="__main__":
-	files = ["me_at_the_zoo.in","trending_today.in","videos_worth_spreading.in","kittens.in.txt"]
+	files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
 			
 	wtfsum=0
 	knapsackscore = 0
+	aascore=0
 	for file in files:
 		i = Instance()
 		#i.read_file("streaming/me_at_the_zoo.in")
@@ -34,20 +35,28 @@ if __name__=="__main__":
 		#i.read_file("streaming/kittens.in.txt")
 		i.read_file("streaming/"+file)
 
-		s= Solution(i)
-		s.knapsack()
-		tmp=s.get_score2()
-		print "knapsack = ",tmp
-		knapsackscore+=tmp
+		# s= Solution(i)
+		# s.knapsack()
+		# tmp=s.get_score2()
+		# print "knapsack = ",tmp
+		# knapsackscore+=tmp
 
-		# s = Solution(i)
-		# s.glouton(select_wtf)
-		# tmp = s.get_score2()
-		# print "wtf = ",tmp
-		# wtfsum+=tmp
+		# s= Solution(i)
+		# s.aa()
+		# tmp=s.get_score2()
+		# print "aa = ",tmp
+		# aascore+=tmp
+
+
+		s = Solution(i)
+		s.glouton(select_wtf)
+		tmp = s.get_score2()
+		print "wtf = ",tmp
+		wtfsum+=tmp
 	print "="*50
 	print "score knapsack = ",knapsackscore
 	print "score wtf = ",wtfsum
+	print "score aa ",aascore
 
 
 	#s.glouton(s.select_random)
