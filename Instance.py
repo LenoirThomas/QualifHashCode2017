@@ -1,5 +1,7 @@
 
 import random
+from collections import defaultdict
+import operator
 
 class Instance(object):
 
@@ -27,12 +29,16 @@ class Instance(object):
 
         # list the endpoints connected by cache server
         self.ep_by_caches = []
+        self.caches_by_ep = []
+        # list videos by ep, [id_ep][id_v] => Nbr
+        self.videos_by_ep = []
 
         # each element corresponding to a 3-uplet (id video, id endpoint , number of this requests)
-        self.requests = []
+        self.requests = defaultdict(int)
 
-        # video request, dict[id video][id_ep] = number of request
-        self.vr = {}
+
+
+
 
     def read_file(self, name):
         f = open(name, "r")
@@ -47,7 +53,8 @@ class Instance(object):
         
         id_ep = 0
         self.ep_by_caches = [ [] for _ in range(self.C)]
-        self.vr = [ {} for _ in range(self.V)]
+        self.caches_by_ep = [ [] for _ in range(self.E)]
+        self.videos_by_ep = [ defaultdict(int) for _ in range(self.E)]
 
 
         while len(lines[i].split())==2:
@@ -61,6 +68,7 @@ class Instance(object):
                     (id_cs,latency) = (int(l2[0]),int(l2[1]))
                     tmp[id_cs] = latency
                     self.ep_by_caches[id_cs].append((id_ep, latency))
+                    self.caches_by_ep[id_ep].append((id_cs,latency))
                 i+=k
             i+=1
             self.ep.append(tmp)
@@ -72,15 +80,8 @@ class Instance(object):
             l = lines[k].split()
 
             (id_v, id_ep, nb_request) = (int(l[0]),int(l[1]),int(l[2]))
-            q = 0
-            while q < len(self.requests) and (self.requests[q][0],self.requests[q][1])!=(id_v,id_ep):
-                q+=1
-            if q == len(self.requests):
-                self.requests.append([id_v,id_ep,nb_request])
-                self.vr[id_v][id_ep] = nb_request
-            else:
-                self.requests[q][2]+=nb_request
-                self.vr[id_v][id_ep]+=nb_request
+            self.requests[(id_v,id_ep)] += nb_request
+            self.videos_by_ep[id_ep][id_v] += nb_request
 
     def print_i(self):
         print self.V," ",self.E," ",self.U," ",self.C," ",self.X
@@ -91,4 +92,3 @@ class Instance(object):
                 print k," ",self.ep[i][k]
         for i in range(len(self.requests)):
             print self.requests[i]
-
