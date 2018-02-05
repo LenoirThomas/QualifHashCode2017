@@ -17,9 +17,9 @@ class Solution(object):
         print "Size max = ", self.inst.X
         b = True
         for i in range(len(self.caches)):
-            print "Caches ", i, " : ", self.caches[i][1], "  => ", self.caches[i][0]
-            if self.caches[i][0] > self.inst.X:
-                b = False
+            print "Caches ", i, " : ", self.caches[i], "  => ", sum( [self.inst.vs[self.caches[i][j]] for j in range(len(self.caches[i]))])
+            # if self.caches[i][0] > self.inst.X:
+            #     b = False
         print "Affection correct : ", b
         print "=" * 101
 
@@ -35,16 +35,15 @@ class Solution(object):
     def sort_cs(self):
         pass
     def get_dict_by_ep(self):
-        l= []
+        l= {}
         for id_ep in range(self.inst.E):
-            d = {}
+
             for (id_v, nb_reques) in self.inst.videos_by_ep[id_ep].items():
-                d[id_v] = False
-            l.append(d)
+                l[(id_ep,id_v)] = False
         return l
 
     def aa(self):
-        done = self.get_dict_by_ep()# d[ep][v] = True if the video is allocated to a cache server connected with ep
+        done = self.get_dict_by_ep()# d[ep,v] = True if the video is allocated to a cache server connected with ep
         
         mo_by_cs = [ 0 for _ in range(self.inst.C)]
         video_by_cs = [ self.get_videos_by_cs2(id_cs) for id_cs in range(self.inst.C)]
@@ -143,9 +142,18 @@ class Solution(object):
                 mo_by_cache[id_cs]+=video_size
                 self.caches[id_cs].append(id_v)
 
+    ################################
+
+    def select_wtf(self,indexs):
+        return min(indexs , key = lambda x:x[1]*x[2])
+
+
+
+
     # 1689464
     def glouton(self,select_func):
         # sort the request by nb request / size => the more there are requests 
+        done = self.get_dict_by_ep()
         mo_by_cs = [0 for _ in range(self.inst.C)]
         request = sorted(self.inst.requests.items(), key = lambda x: x[1]/self.inst.vs[x[0][0]], reverse= True)
         
@@ -160,7 +168,7 @@ class Solution(object):
             for id_cache in cache_servers:
                 # print self.caches[id_cache]+video_size," ",self.inst.X
                 if mo_by_cs[id_cache]+video_size <= self.inst.X and id_v not in self.caches[id_cache]: # take only the servers which can be 
-                    # appedn a triplet = (id cache, nb megab on this cache, the latency ) 
+                    #appedn a triplet = (id cache, nb megab on this cache, the latency ) 
                     #indexs.append((id_cache,mo_by_cs[id_cache], (self.inst.lat_data[id_e]-cache_servers[id_cache])))
                     indexs.append((id_cache,mo_by_cs[id_cache], cache_servers[id_cache]))
                     
@@ -169,7 +177,40 @@ class Solution(object):
                 index = select_func(indexs)
                 mo_by_cs[index[0]]+=video_size
                 self.caches[index[0]].append(id_v)
-        return 0
+                done[(id_e,id_v)]=True
+
+        return done
+
+    def optimize_cache(self,id_cs,done):
+        # empty the cache server        
+        self.caches[id_cs] = []
+        score_by_video = defaultdict(int)
+        eps_by_video = defaultdict(list)
+        for (id_ep, lat) in self.inst.ep_by_caches[id_cs]:
+            for (id_v, nb_request) in self.inst.videos_by_ep[id_ep].items():
+                if done[(id_ep,id_v)] == False:
+                #score_by_video[id_v] += ((self.inst.lat_data[id_ep]-self.inst.ep[id_ep][id_cs])*nb_request)
+                    score_by_video[id_v] += nb_request
+                    eps_by_video[id_v].append(id_ep)
+
+        video_sorted = sorted(score_by_video.items(), key = lambda x:x[1], reverse = True)
+        mo = 0
+        for (id_v,score) in video_sorted:
+            if mo + self.inst.vs[id_v] <= self.inst.X:
+                self.caches[id_cs].append(id_v)
+                mo += self.inst.vs[id_v]
+                for id_ep in eps_by_video[id_v]:
+                    done[(id_ep,id_v)]=True
+        return done
+
+    def lol(self):
+        done = self.glouton(self.select_wtf)
+        for id_cs in range(self.inst.C):
+            done = self.optimize_cache(id_cs,done)
+            print "score = ",self.get_score2()
+            #self.print_s2()
+
+
 
     def optimize_couple_caches(self,id_cs1,id_cs2):
         set_cs1 = set()
