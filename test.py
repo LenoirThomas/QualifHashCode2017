@@ -8,8 +8,8 @@ from Solution import Solution
 
 
 if __name__=="__main__":
-	#files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
-	files = ["videos_worth_spreading.in"]
+	files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
+	#files = ["videos_worth_spreading.in"]
 			
 	wtfsum=0
 	knapsackscore = 0
@@ -35,10 +35,13 @@ if __name__=="__main__":
 		# print "aa = ",tmp
 		# aascore+=tmp
 
-		s= Solution(i)
-		s.lol()
-		print "="*50
+		# s= Solution(i)
+		# s.lol()
+		# print "="*50
 
+		s = Solution(i)
+		s.glouton2()
+		print s.get_score2()
 
 		# s = Solution(i)
 		# #s.glouton(select_wtf)

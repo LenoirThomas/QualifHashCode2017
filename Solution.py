@@ -122,25 +122,32 @@ class Solution(object):
         return (scor * 1000) / nbr
 
     def glouton2(self):
-        cs_by_v = []
+        cs_by_v = defaultdict(int)
         mo_by_cache = [0 for _ in range(self.inst.C)]
-        for id_v in range(self.inst.V):
-            for id_cs in range(self.inst.C):
-                eps = self.inst.ep_by_caches[id_cs]
-                tmp = 0
-                for (id_ep, latency) in eps:
-                    if id_v in self.inst.videos_by_ep[id_ep].keys():
-                        tmp += (self.inst.videos_by_ep[id_ep][id_v] * (self.inst.lat_data[id_ep] - latency))
+ 
+        for id_cs in range(self.inst.C):
+            for (id_ep, latency) in self.inst.ep_by_caches[id_cs]:
+                for (id_v,nb_r) in self.inst.videos_by_ep[id_ep].items():
+                    cs_by_v[(id_v,id_cs)] += (nb_r * (self.inst.lat_data[id_ep] - latency))
 
-                    cs_by_v.append((id_v, id_cs, tmp))
-        cs_by_v = sorted(cs_by_v, key=lambda x: x[2], reverse=True)
+        print "end scoring glouton2"
+        cs_by_v = sorted(cs_by_v.items(), key=lambda x: x[1], reverse=True)
+        done = [False] * self.inst.V
         # fill the data for the score
-        for (id_v,id_cs,tmp) in cs_by_v:
-            # print id_v," ",id_cs," ",tmp
-            video_size = self.inst.vs[id_v]
-            if mo_by_cache[id_cs]+video_size <= self.inst.X:
-                mo_by_cache[id_cs]+=video_size
-                self.caches[id_cs].append(id_v)
+        for ((id_v,id_cs),tmp) in cs_by_v:
+            if not done[id_v]:
+                # print id_v," ",id_cs," ",tmp
+                video_size = self.inst.vs[id_v]
+                if mo_by_cache[id_cs]+video_size <= self.inst.X:
+                    mo_by_cache[id_cs]+=video_size
+                    self.caches[id_cs].append(id_v)
+                    done[id_v] = True
+
+        for id_cs in range(self.inst.C):
+            for (id_ep, latency) in self.inst.ep_by_caches[id_cs]:
+                for (id_v,nb_r) in self.inst.videos_by_ep[id_ep].items():
+                    if id_v not in self.caches[id_cs]:
+                        self.caches.append(id_v)      
 
     ################################
 
