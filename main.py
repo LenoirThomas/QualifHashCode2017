@@ -50,13 +50,34 @@ def glouton():
 	print "Glouton 2  = ",s.get_score()
 	s.print_s2()
 
+def get_score_global():
+	files = ["me_at_the_zoo.in", "trending_today.in", "videos_worth_spreading.in","kittens.in.txt"]
+	#files = ["videos_worth_spreading.in","kittens.in.txt"]
+	#442662
+	#170889
+	#476660
+	
+	summ = 0
+	for file in files:
+		i = Instance()
+		i.read_file("streaming/"+file)
+		s= Solution(i)
+		#s.glouton(s.select_wtf)
+		s.glouton2()
+		tmp = s.get_score()
+		print "score ",file," = ",tmp
+		summ+=tmp
+	print "Sum = ",summ
+
 	
 	
 
 if __name__ == "__main__":
 
 	#example()
-	glouton()
+	#glouton()
+	get_score_global()
+
 	
 	
 

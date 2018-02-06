@@ -3,6 +3,7 @@ import random
 from collections import defaultdict
 import operator
 from copy import deepcopy
+import time
 
 class Solution(object):
 
@@ -123,26 +124,38 @@ class Solution(object):
             return 0
         return (scor * 1000) / nbr
 
+    # 2 022 422
     def glouton2(self):
-        cs_by_v = []
-        mo_by_cache = [0 for _ in range(self.inst.C)]
-        for id_v in range(self.inst.V):
-            for id_cs in range(self.inst.C):
-                eps = self.inst.ep_by_caches[id_cs]
-                tmp = 0
-                for (id_ep, latency) in eps:
-                    if id_v in self.inst.videos_by_ep[id_ep].keys():
-                        tmp += (self.inst.videos_by_ep[id_ep][id_v] * (self.inst.lat_data[id_ep] - latency))
+        cs_by_v = defaultdict(int)
+        #mo_by_cache = [0 for _ in range(self.inst.C)]
+ 
+        # t0 = time.clock()
+        # for id_cs in range(self.inst.C):
+        #     for (id_ep, latency) in self.inst.ep_by_caches[id_cs]:
+        #         for (id_v,nb_r) in self.inst.videos_by_ep[id_ep].items():
+        #             cs_by_v[(id_v,id_cs)] += (nb_r * (self.inst.lat_data[id_ep] - latency))
+        # print "sol 1 = ",time.clock() - t0
 
-                    cs_by_v.append((id_v, id_cs, tmp))
-        cs_by_v = sorted(cs_by_v, key=lambda x: x[2], reverse=True)
+        #t0 = time.clock()
+        ### get the score for each couple video/cache
+        for ((rv,re),rn) in self.inst.requests.items():
+            for (id_cs, lat) in self.inst.caches_by_ep[re]:
+                cs_by_v[(rv,id_cs)]+=(rn * (self.inst.lat_data[re]- lat))
+        #print "sol 2 = ",time.clock() - t0
+
+
+        cs_by_v = sorted(cs_by_v.items(), key=lambda x: x[1], reverse=True)
+        done = [False] * self.inst.V
         # fill the data for the score
-        for (id_v,id_cs,tmp) in cs_by_v:
-            # print id_v," ",id_cs," ",tmp
-            video_size = self.inst.vs[id_v]
-            if mo_by_cache[id_cs]+video_size <= self.inst.X:
-                mo_by_cache[id_cs]+=video_size
-                self.caches[id_cs].append(id_v)
+        for ((id_v,id_cs),_) in cs_by_v:
+            if not done[id_v] and self.mo_by_cs[id_cs]+self.inst.vs[id_v] <= self.inst.X:
+                    self.mo_by_cs[id_cs]+=self.inst.vs[id_v]
+                    self.caches[id_cs].append(id_v)
+                    done[id_v] = True
+        for ((id_v,id_cs),_) in cs_by_v:
+            if not id_v in self.caches[id_cs] and self.mo_by_cs[id_cs]+self.inst.vs[id_v]<= self.inst.X:
+                self.caches.append(id_v)
+                self.mo_by_cs[id_cs]+=self.inst.vs[id_v]
 
     ################################
 
@@ -180,27 +193,55 @@ class Solution(object):
                 self.caches[index[0]].append(id_v)
                 #done[(id_e,id_v)]=True
 
-    def optimize_cache(self,id_cs,done):
-        # empty the cache server        
-        self.caches[id_cs] = []
+    def optimize_cache(self,id_cs):
+        ###score
         score_by_video = defaultdict(int)
         eps_by_video = defaultdict(list)
         for (id_ep, lat) in self.inst.ep_by_caches[id_cs]:
             for (id_v, nb_request) in self.inst.videos_by_ep[id_ep].items():
-                if done[(id_ep,id_v)] == False:
-                #score_by_video[id_v] += ((self.inst.lat_data[id_ep]-self.inst.ep[id_ep][id_cs])*nb_request)
-                    score_by_video[id_v] += nb_request
+                    score_by_video[id_v] += (nb_request * (self.inst.lat_data[id_cs] - lat))
                     eps_by_video[id_v].append(id_ep)
 
-        video_sorted = sorted(score_by_video.items(), key = lambda x:x[1], reverse = True)
-        mo = 0
-        for (id_v,score) in video_sorted:
-            if mo + self.inst.vs[id_v] <= self.inst.X:
-                self.caches[id_cs].append(id_v)
-                mo += self.inst.vs[id_v]
-                for id_ep in eps_by_video[id_v]:
-                    done[(id_ep,id_v)]=True
-        return done
+
+
+        ########### solve backspace by dynamic programming 
+
+        print "==============score before = ",sum(score_by_video[i] for i in self.caches[id_cs])
+        self.caches[id_cs] = []
+        self.mo_by_cs[id_cs]=0
+
+        m = [ [ 0 for _ in range(self.inst.X) ] for _ in range(len(score_by_video))]
+        videos = score_by_video.items()
+        # row => video 
+        # column => size of the cache
+        for j in range(self.inst.X):
+            if self.inst.vs[videos[0][0]] <= j:
+                m[0][j] = videos[0][1] 
+
+        for i in range(1,len(score_by_video)):
+            for j in range(self.inst.X):
+                if j>=self.inst.vs[videos[i][0]]:
+                    m[i][j] = max(m[i-1][j], m[i-1][j-self.inst.vs[videos[i][0]]]+videos[i][1])
+                else:
+                    m[i][j] = m[i-1][j]
+
+
+        ## backtracking:
+        i = len(score_by_video)-1
+        j = self.inst.X -1 
+        while i!=0 and j!=0:
+            if m[i][j] == m[i-1][j]: # dont take the video i 
+                i-=1
+            else:
+                self.caches[id_cs].append(videos[i][0])
+                self.mo_by_cs[id_cs]+=self.inst.vs[videos[i][0]]
+                j -= self.inst.vs[videos[i][0]]
+                i-=1
+        print "cache = ",id_cs," : ",self.caches[id_cs]," size = ",self.mo_by_cs[id_cs]
+        for id_v,score in videos:
+            if id_v not in self.caches[id_cs]:
+                print "id_v = ",id_v," size = ",self.inst.vs[id_v]
+        print "==============score after = ",sum(score_by_video[i] for i in self.caches[id_cs])
 
 
     def optimize_couple_caches(self,id_cs1,id_cs2):
