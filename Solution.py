@@ -2,7 +2,7 @@
 import random
 from collections import defaultdict
 import operator
-
+from copy import deepcopy
 
 class Solution(object):
 
@@ -11,6 +11,8 @@ class Solution(object):
 
         # the quantity of mo by cache server, must be less than inst.X
         self.caches = [[] for _ in range(self.inst.C)]
+        self.mo_by_cs = [0 for _ in range(self.inst.C)]
+
 
     def print_s2(self):
         print "=" * 101
@@ -153,8 +155,7 @@ class Solution(object):
     # 1689464
     def glouton(self,select_func):
         # sort the request by nb request / size => the more there are requests 
-        done = self.get_dict_by_ep()
-        mo_by_cs = [0 for _ in range(self.inst.C)]
+        #done = self.get_dict_by_ep()
         request = sorted(self.inst.requests.items(), key = lambda x: x[1]/self.inst.vs[x[0][0]], reverse= True)
         
         #request = sorted(self.inst.requests.items(), key = lambda x: self.inst.lat_data[x[0][1]] - x[1]/self.inst.vs[x[0][0]], reverse= True)
@@ -167,19 +168,17 @@ class Solution(object):
             indexs = []
             for id_cache in cache_servers:
                 # print self.caches[id_cache]+video_size," ",self.inst.X
-                if mo_by_cs[id_cache]+video_size <= self.inst.X and id_v not in self.caches[id_cache]: # take only the servers which can be 
+                if self.mo_by_cs[id_cache]+video_size <= self.inst.X and id_v not in self.caches[id_cache]: # take only the servers which can be 
                     #appedn a triplet = (id cache, nb megab on this cache, the latency ) 
                     #indexs.append((id_cache,mo_by_cs[id_cache], (self.inst.lat_data[id_e]-cache_servers[id_cache])))
-                    indexs.append((id_cache,mo_by_cs[id_cache], cache_servers[id_cache]))
+                    indexs.append((id_cache,self.mo_by_cs[id_cache], cache_servers[id_cache]))
                     
             if indexs:
                 # ......... select a cache server among these
                 index = select_func(indexs)
-                mo_by_cs[index[0]]+=video_size
+                self.mo_by_cs[index[0]]+=video_size
                 self.caches[index[0]].append(id_v)
-                done[(id_e,id_v)]=True
-
-        return done
+                #done[(id_e,id_v)]=True
 
     def optimize_cache(self,id_cs,done):
         # empty the cache server        
@@ -203,14 +202,6 @@ class Solution(object):
                     done[(id_ep,id_v)]=True
         return done
 
-    def lol(self):
-        done = self.glouton(self.select_wtf)
-        for id_cs in range(self.inst.C):
-            done = self.optimize_cache(id_cs,done)
-            print "score = ",self.get_score2()
-            #self.print_s2()
-
-
 
     def optimize_couple_caches(self,id_cs1,id_cs2):
         set_cs1 = set()
@@ -225,6 +216,82 @@ class Solution(object):
 
 
         print "here"
+
+    ##########################
+    def glouton3(self):
+        m = [ defaultdict(int)  for i in range(self.inst.C) ]
+        for k in range(self.inst.C):
+            #if k == 0:#init first line
+            for (id_ep,lat) in self.inst.ep_by_caches[k]:
+                for (id_v,nb_r) in self.inst.videos_by_ep[id_ep].items():
+                    m[k][id_v]+= nb_r
+        for k in range(self.inst.C):
+            s = sorted(m[k].items(),key = lambda x:x[1],reverse=True)
+            mo=0
+            for (id_v,nb_r) in s:
+                if self.inst.vs[id_v]+mo < self.inst.X:
+                    self.caches[k].append(id_v)
+                    mo+= self.inst.vs[id_v]
+
+    ## del a random key in a cache server
+    def n1(self,id_cs):
+        if len(self.caches[id_cs])>0:
+            i = random.randint(0,len(self.caches[id_cs])-1)
+            self.mo_by_cs[id_cs]-=self.inst.vs[self.caches[id_cs][i]]
+            del self.caches[id_cs][i]
+
+    def n2(self,id_cs):
+        videos =self.get_videos_by_cs(id_cs)
+        v = sorted(videos.items(), key = lambda x:x[1],reverse=False)
+        for (id_v,score) in v:
+            if self.mo_by_cs[id_cs]+self.inst.vs[id_v]<= self.inst.X:
+                self.caches[id_cs].append(id_v)
+                self.mo_by_cs[id_cs] +=self.inst.vs[id_v]
+                break
+
+    def recuit_simule(self):
+        self.glouton(self.select_wtf)
+        current = deepcopy(self)
+        current_score = current.get_score2()
+        print "init score = ",current_score
+        for x in range(100):
+            print "x = ",x
+            copi =deepcopy(current)
+            for id_cs in range(self.inst.C):
+                for _ in range(random.randint(0,len(self.caches[id_cs]))):
+                    copi.n1(id_cs)
+
+            for id_cs in range(self.inst.C):
+                copi.n2(id_cs)
+            copi_score = copi.get_score2()
+            if copi_score>=current_score:
+                current = copi
+                current_score = copi_score
+                print "improve = ",copi_score
+
+
+            
+    # ## swap two videos 
+    # def n2(self,id_cs1,id_cs2,mo_by_cs):
+
+    #     intersection = set()
+    #     for id_v1 in self.caches[id_cs1].keys():
+    #         for id_v2 in self.caches[id_cs2].keys():
+    #             if id_v1==id_v2:
+    #                 intersection.add(id_v1)
+
+    #     for id_v1 in intersection:
+    #         for id_v2 in intersection:
+    #             if id_v1 != id_v2:
+    #                 if mo_by_cs[id_cs1] - self.inst.vs[id_v1] + self.inst.vs[id_v2] <= self.inst.X and
+    #                     mo_by_cs[id_cs2] - self.inst.vs[id_v2] + self.inst.vs[id_v1] <= self.inst.X:
+    #                     self.caches[id_cs1].appe
+
+
+
+
+
+
 
 
 

@@ -8,8 +8,8 @@ from Solution import Solution
 
 
 if __name__=="__main__":
-	#files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
-	files = ["videos_worth_spreading.in"]
+	files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
+	#files = ["videos_worth_spreading.in"]
 			
 	wtfsum=0
 	knapsackscore = 0
@@ -36,7 +36,8 @@ if __name__=="__main__":
 		# aascore+=tmp
 
 		s= Solution(i)
-		s.lol()
+		s.recuit_simule()
+		#print s.get_score2()
 		print "="*50
 
 
