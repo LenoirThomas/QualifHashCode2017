@@ -8,15 +8,16 @@ from Solution import Solution
 
 
 if __name__=="__main__":
-	#files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
-	files = ["me_at_the_zoo.in"]
-	#files = ["trending_today.in"]
-			
+	files = ["me_at_the_zoo.in","videos_worth_spreading.in","trending_today.in","kittens.in.txt"]
+	#files = ["me_at_the_zoo.in"]
+	#files = ["videos_worth_spreading.in"]
+	#files = ["kittens.in.txt"]		
 	wtfsum=0
 	knapsackscore = 0
 	glouton2=0
 	aascore = 0
 	for file in files:
+		print "=====================",file,"================="
 		i = Instance()
 		#i.read_file("streaming/me_at_the_zoo.in")
 		#i.read_file("streaming/test.txt")
@@ -47,16 +48,19 @@ if __name__=="__main__":
 		s.glouton2()
 		tmp = s.get_score2()
 		glouton2 += tmp
-		print "glouton 2, ",file," = ",tmp
-		s.optimize_cache(0)
-		print "optimize = ",s.get_score2()
+		print "glouton 2 =",tmp
 
-		s = Solution(i)
-		s.glouton(s.select_wtf)
-		#s.glouton(select_low_latency)
-		tmp = s.get_score2()
-		print "glouton wtf, ",file," = ",tmp
-		wtfsum+=tmp
+		# s = Solution(i)
+		# s.optimize_caches()
+		# tmp = s.get_score2()
+		# print "optimize = ",tmp
+
+		# s = Solution(i)
+		# s.glouton(s.select_wtf)
+		# #s.glouton(select_low_latency)
+		# tmp = s.get_score2()
+		# print "glouton wtf = ",tmp
+		# wtfsum+=tmp
 
 
 	print "="*50

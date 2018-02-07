@@ -205,8 +205,7 @@ class Solution(object):
 
 
         ########### solve backspace by dynamic programming 
-
-        print "==============score before = ",sum(score_by_video[i] for i in self.caches[id_cs])
+        print "end_ scoreing"
         self.caches[id_cs] = []
         self.mo_by_cs[id_cs]=0
 
@@ -225,11 +224,13 @@ class Solution(object):
                 else:
                     m[i][j] = m[i-1][j]
 
+        print "end table"
+        print "==============score before = ",sum(score_by_video[i] for i in self.caches[id_cs])
 
         ## backtracking:
         i = len(score_by_video)-1
         j = self.inst.X -1 
-        while i!=0 and j!=0:
+        while i>=0 and j>=0:
             if m[i][j] == m[i-1][j]: # dont take the video i 
                 i-=1
             else:
@@ -237,26 +238,18 @@ class Solution(object):
                 self.mo_by_cs[id_cs]+=self.inst.vs[videos[i][0]]
                 j -= self.inst.vs[videos[i][0]]
                 i-=1
-        print "cache = ",id_cs," : ",self.caches[id_cs]," size = ",self.mo_by_cs[id_cs]
-        for id_v,score in videos:
-            if id_v not in self.caches[id_cs]:
-                print "id_v = ",id_v," size = ",self.inst.vs[id_v]
+        print "end backtraking"
+
+
         print "==============score after = ",sum(score_by_video[i] for i in self.caches[id_cs])
 
 
-    def optimize_couple_caches(self,id_cs1,id_cs2):
-        set_cs1 = set()
-        set_cs2 = set()
-        for (id_ep1,latency1) in self.ep_by_caches[id_cs1]:
-            for (id_ep2,latency2) in self.ep_by_caches[id_cs2]:
-                if id_ep1 == id_ep2:# if connected with a same endpoint
-                    for v1 in self.caches[id_cs1]:
-                        for v2 in self.caches[id_cs2]:
-                            if v1 == v2: # 
-                                pass
+    def optimize_caches(self):
+        for id_cs in range(self.inst.C):
+            print id_cs,"/",self.inst.C
+            self.optimize_cache(id_cs)
 
-
-        print "here"
+        
 
     ##########################
     def glouton3(self):
